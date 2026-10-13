@@ -43,10 +43,12 @@ SUBTITLE = "Avg % of capacity by hour · family play + cowork venue · 12 months
 
 
 class HeatmapScene:
-    def __init__(self, grid: pd.DataFrame, orientation: str, vmax: float = 80.0):
+    def __init__(self, grid: pd.DataFrame, orientation: str, vmax: float = 80.0,
+                 theme: style.Theme = style.DEFAULT_THEME):
         self.orientation = orientation
+        self.t = theme
         self.L = LAYOUT[orientation]
-        self.fig = style.new_canvas(orientation)
+        self.fig = style.new_canvas(orientation, theme)
         # grid: index = hours, columns = weekdays
         self.hours = list(grid.index)
         self.days = list(grid.columns)
@@ -56,12 +58,12 @@ class HeatmapScene:
         self._draw_frame_text()
         self._draw_grid(values)
         self._draw_colorbar(vmax)
-        style.add_synthetic_tag(self.fig, size_px=24 if orientation == "vertical" else 22)
+        style.add_synthetic_tag(self.fig, theme, size_px=24 if orientation == "vertical" else 22)
         self.callout = self.fig.text(self.L.get("callout_x", 0.5), self.L["callout_y"], "",
                                      ha=self.L.get("callout_ha", "center"), va="center",
                                      multialignment=self.L.get("callout_ha", "center"),
                                      fontsize=style.px_to_pt(self.L["callout_px"]),
-                                     fontweight="bold", color=style.INK)
+                                     fontweight="bold", color=self.t.ink)
 
     # ---- static parts ------------------------------------------------------
     def _draw_frame_text(self):
@@ -70,12 +72,12 @@ class HeatmapScene:
         self.fig.text(0.5 if L["title_wrap"] else L["ax"][0], L["title_y"], title,
                       ha="center" if L["title_wrap"] else "left", va="top",
                       fontsize=style.px_to_pt(L["title_px"]), fontweight="bold",
-                      color=style.INK, linespacing=1.1)
+                      color=self.t.ink, linespacing=1.1)
         sub_y = L["title_y"] - (0.085 if L["title_wrap"] else 0.085)
         sub = SUBTITLE.replace(" · 12", "\n12") if L["title_wrap"] else SUBTITLE
         self.fig.text(0.5 if L["title_wrap"] else L["ax"][0], sub_y, sub,
                       ha="center" if L["title_wrap"] else "left", va="top",
-                      fontsize=style.px_to_pt(L["sub_px"]), color=style.MUTED, linespacing=1.25)
+                      fontsize=style.px_to_pt(L["sub_px"]), color=self.t.muted, linespacing=1.25)
 
     def _cell_xy(self, hi: int, di: int) -> tuple[int, int]:
         """Return (col, row) for an hour index and day index; row 0 is the top."""
@@ -103,27 +105,27 @@ class HeatmapScene:
             else [DAY_ABBR[d] for d in self.days]
         for c, lab in enumerate(col_labels):
             ax.text(c + 0.5, -0.18, lab, ha="center", va="bottom", fontsize=tick_pt,
-                    color=style.INK, fontweight="semibold")
+                    color=self.t.ink, fontweight="semibold")
         for r, lab in enumerate(row_labels):
             ax.text(-0.12, r + 0.5, lab, ha="right", va="center", fontsize=tick_pt,
-                    color=style.INK, fontweight="semibold")
+                    color=self.t.ink, fontweight="semibold")
 
         for hi, h in enumerate(self.hours):
             for di, d in enumerate(self.days):
                 v = float(values[hi, di])
                 c, r = self._cell_xy(hi, di)
-                rgba = style.HEAT_CMAP(self.norm(v))
+                rgba = self.t.cmap(self.norm(v))
                 bg = FancyBboxPatch((c + gap, r + gap), 1 - 2 * gap, 1 - 2 * gap,
                                     boxstyle="round,pad=0,rounding_size=0.08",
-                                    fc=style.NAVY_LIGHT, ec="none")
+                                    fc=self.t.panel, ec="none")
                 cell = FancyBboxPatch((c + gap, r + gap), 1 - 2 * gap, 1 - 2 * gap,
                                       boxstyle="round,pad=0,rounding_size=0.08",
                                       fc=rgba, ec="none")
                 outline = Rectangle((c + gap / 2, r + gap / 2), 1 - gap, 1 - gap, fill=False,
-                                    ec=style.INK, lw=5, visible=False, zorder=5)
+                                    ec=self.t.ink, lw=5, visible=False, zorder=5)
                 txt = ax.text(c + 0.5, r + 0.5, f"{v:.0f}%", ha="center", va="center",
                               fontsize=cell_pt, fontweight="bold",
-                              color=style.text_color_for(rgba))
+                              color=style.text_color_for(rgba, self.t))
                 ax.add_patch(bg)
                 ax.add_patch(cell)
                 ax.add_patch(outline)
@@ -133,12 +135,12 @@ class HeatmapScene:
         L = self.L
         cax = self.fig.add_axes(L["cbar"])
         grad = np.linspace(0, 1, 256)[None, :]
-        cax.imshow(grad, aspect="auto", cmap=style.HEAT_CMAP, extent=(0, vmax, 0, 1))
+        cax.imshow(grad, aspect="auto", cmap=self.t.cmap, extent=(0, vmax, 0, 1))
         cax.set_yticks([])
         ticks = np.arange(0, vmax + 1, 20)
         cax.set_xticks(ticks)
         cax.set_xticklabels([f"{t:.0f}%" for t in ticks[:-1]] + [f"{vmax:.0f}%+"],
-                            fontsize=style.px_to_pt(L["cbar_px"]), color=style.MUTED)
+                            fontsize=style.px_to_pt(L["cbar_px"]), color=self.t.muted)
         cax.tick_params(length=0, pad=8)
         for s in cax.spines.values():
             s.set_visible(False)
@@ -170,9 +172,9 @@ class HeatmapScene:
         for c in self.cells.values():
             c["outline"].set_edgecolor(color)
 
-    def set_callout(self, text: str, color: str = style.INK, alpha: float = 1.0) -> None:
+    def set_callout(self, text: str, color: str | None = None, alpha: float = 1.0) -> None:
         self.callout.set_text(text)
-        self.callout.set_color(color)
+        self.callout.set_color(color or self.t.ink)
         self.callout.set_alpha(alpha)
 
     def to_rgba(self) -> np.ndarray:
@@ -180,4 +182,4 @@ class HeatmapScene:
         return np.asarray(self.fig.canvas.buffer_rgba())
 
     def save_png(self, path) -> None:
-        self.fig.savefig(path, dpi=style.DPI, facecolor=style.NAVY)
+        self.fig.savefig(path, dpi=style.DPI, facecolor=self.t.bg)

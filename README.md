@@ -40,6 +40,25 @@ python scripts/make_video01_assets.py   # -> assets/{vertical,landscape}/v01_*
 | `v01_clip_quiet_hours.mp4` | dead midweek midday (Tue–Thu 12–2pm) highlighted |
 | `v01_clip_peak_hour.mp4` | busiest hour highlighted, with people turned away and the revenue estimate |
 
+### Style themes
+The same four assets are rendered in each theme defined in `src/style.py`
+(`THEMES`). The house theme, **navy**, writes to `assets/<orientation>/`. Every other
+theme writes to `assets/<orientation>/styles/<theme>/`.
+
+| Theme | Look |
+|---|---|
+| `navy` | House style: dark navy `#0B1A2D`, teal-to-coral heat ramp |
+| `light` | Paper-white with a navy/teal ramp, for LinkedIn or slides |
+| `neon` | Near-black with an electric violet-to-cyan ramp |
+| `mono` | Greyscale; only the highlights get colour |
+| `warm` | Espresso and terracotta editorial look |
+| `accessible` | Colour-blind-safe cividis ramp on navy, white highlights |
+
+```bash
+python scripts/make_video01_assets.py --theme neon     # one theme
+python scripts/make_video01_assets.py --all-themes     # all of them (~5 min)
+```
+
 **Synthetic venue model** (`src/venue_data.py`): calendar year 2025, open 8am–8pm
 (hourly slots 8–19), closed Jan 1 and Dec 25. Three rooms: Play Hall (60),
 Cowork Lounge (30), Party Studio (20). Six membership tiers (drop-in, family
