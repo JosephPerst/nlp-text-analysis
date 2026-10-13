@@ -1,0 +1,3 @@
+id,title,pillar,status,record_date,post_date,platform,views,notes
+V01,Your busiest hour might be costing you money,Data storytelling,assets_ready,,,"Instagram; TikTok; LinkedIn; YouTube Shorts",,Synthetic venue data; heatmap reveal + quiet/peak clips in assets/
+C01,Me vs. AI: forecast challenge,Me vs. AI,prep_done,,,"Instagram; TikTok; LinkedIn; YouTube Shorts",,Air passengers 1949-1960; holdout = 1960; MAE; 15 min each; record AI run live
